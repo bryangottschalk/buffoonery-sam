@@ -47,12 +47,12 @@ exports.handler = async event => {
   let gameroom = await getGameroom(String(roomcode));
   if (!gameroom && roomcode) {
     gameroom = new Gameroom(roomcode);
-    gameroom.connectedClients.push(String(`${event.requestContext.connectionId}?roomcode=${roomcode}`))
+    gameroom.connectedClients.push(String(`${event.requestContext.connectionId}`))
     console.log("🚀 ~ file: index.js ~ line 43 ~ gameroom", gameroom)
   } else {
     console.log('FOUND GAMEROOM')
     gameroom = validateGameroom(gameroom);
-    gameroom.connectedClients.push(String(`${event.requestContext.connectionId}?roomcode=${roomcode}`))
+    gameroom.connectedClients.push(String(`${event.requestContext.connectionId}`))
   }
   console.log("🚀 ~ file: index.js ~ line 61 ~ gameroom", gameroom)
 

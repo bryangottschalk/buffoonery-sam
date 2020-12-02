@@ -21,28 +21,39 @@ const getGameroom = async (key) => {
   return result.Item;
 };
 
-const getParameterByName = (name, str) => {
-  name = name.replace(/[\[\]]/g, '\\$&');
-  var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
-      results = regex.exec(str);
-  if (!results) return null;
-  if (!results[2]) return '';
-  return decodeURIComponent(results[2].replace(/\+/g, ' '));
-}
+const saveGameroom = async function (room) {
+  try {
+    await ddb
+      .put({
+        TableName: process.env.TABLE_NAME,
+        Item: room
+      })
+      .promise();
+    logIt('saveToDDB success');
+  } catch (err) {
+    console.error('saveToDDB error: ', err);
+  }
+};
 
 exports.handler = async event => {
+  let roomcode, room;
   const allData = await ddb.scan({ TableName: process.env.TABLE_NAME }).promise();
-
+  console.log('all data', allData)
   allData.Items.forEach(d => {
     d.connectedClients.forEach(client => {
       if (client === event.requestContext.connectionId) {
         console.log('found a match!')
+        room = d;
+        d.connectedClients = d.connectedClients.filter(connectionId => connectionId !== client);
         console.log(`roomcode=${d.roomcode}`)
+        roomcode = d.roomcode;
       }
     })
   })
-  const roomcode = getParameterByName('roomcode', 'W515Ie1poAMCL1A=?roomcode=A0A5');
-  console.log("EVENT:", event)
+
+  if (roomcode) {
+    saveGameroom(room)
+  }
 
   const deleteParams = {
     TableName: process.env.TABLE_NAME,

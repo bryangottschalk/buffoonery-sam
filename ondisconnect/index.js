@@ -31,6 +31,16 @@ const getParameterByName = (name, str) => {
 }
 
 exports.handler = async event => {
+  const allData = await ddb.scan({ TableName: process.env.TABLE_NAME }).promise();
+
+  allData.Items.forEach(d => {
+    d.connectedClients.forEach(client => {
+      if (client === event.requestContext.connectionId) {
+        console.log('found a match!')
+        console.log(`roomcode=${d.roomcode}`)
+      }
+    })
+  })
   const roomcode = getParameterByName('roomcode', 'W515Ie1poAMCL1A=?roomcode=A0A5');
   console.log("EVENT:", event)
 

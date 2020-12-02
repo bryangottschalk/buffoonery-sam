@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: MIT-0
 
 const AWS = require('aws-sdk');
-
 const ddb = new AWS.DynamoDB.DocumentClient({ apiVersion: '2012-08-10', region: process.env.AWS_REGION });
 
 const { TABLE_NAME } = process.env;
 
 exports.handler = async event => {
+  const { connectionId } = event.requestContext;
+  console.log('EVENT', event)
   let connectionData;
   
   try {
@@ -23,6 +24,8 @@ exports.handler = async event => {
   });
   
   const postData = JSON.parse(event.body).data;
+  await apigwManagementApi.postToConnection({ConnectionId: connectionId, Data: 'This is a reply to your message'}).promise();
+  console.log('postData', postData)
   
   const postCalls = connectionData.Items.map(async ({ roomcode }) => {
     try {

@@ -11,8 +11,29 @@ const AWS = require('aws-sdk');
 
 const ddb = new AWS.DynamoDB.DocumentClient({ apiVersion: '2012-08-10', region: process.env.AWS_REGION });
 
+const getGameroom = async (key) => {
+  const result = await ddb
+    .get({
+      TableName: process.env.TABLE_NAME,
+      Key: { roomcode: key }
+    })
+    .promise();
+  return result.Item;
+};
+
+const getParameterByName = (name, str) => {
+  name = name.replace(/[\[\]]/g, '\\$&');
+  var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
+      results = regex.exec(str);
+  if (!results) return null;
+  if (!results[2]) return '';
+  return decodeURIComponent(results[2].replace(/\+/g, ' '));
+}
+
 exports.handler = async event => {
-console.log("🚀 ~ file: index.js ~ line 15 ~ event ", event )
+  const roomcode = getParameterByName('roomcode', 'W515Ie1poAMCL1A=?roomcode=A0A5');
+  console.log("EVENT:", event)
+
   const deleteParams = {
     TableName: process.env.TABLE_NAME,
     Key: {

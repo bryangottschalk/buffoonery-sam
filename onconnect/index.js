@@ -35,18 +35,24 @@ const validateGameroom = (gameroom) => {
 
 
 exports.handler = async event => {
-  const roomcode = event.queryStringParameters.roomcode;
+  let roomcode;
+  if (event.queryStringParameters) {
+    roomcode = event.queryStringParameters.roomcode;
+  } else {
+    roomcode = 'ABCD'
+  }
   if (!roomcode) {
     throw new Error('roomcode must be supplied to identify gameroom')
   }
   let gameroom = await getGameroom(String(roomcode));
   if (!gameroom && roomcode) {
     gameroom = new Gameroom(roomcode);
+    gameroom.connectedClients.push(String(`${event.requestContext.connectionId}?roomcode=${roomcode}`))
     console.log("🚀 ~ file: index.js ~ line 43 ~ gameroom", gameroom)
   } else {
     console.log('FOUND GAMEROOM')
     gameroom = validateGameroom(gameroom);
-    gameroom.connectedClients.push(String(event.requestContext.connectionId))
+    gameroom.connectedClients.push(String(`${event.requestContext.connectionId}?roomcode=${roomcode}`))
   }
   console.log("🚀 ~ file: index.js ~ line 61 ~ gameroom", gameroom)
 

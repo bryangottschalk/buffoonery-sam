@@ -1,0 +1,34 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Stack to deploy Buffoonery's Architecture 
+
+Parameters: 
+  StageName: 
+    Type: String 
+    Description: the development stage
+  MyHostedZone: 
+    Type: String 
+    Description: Hosted Zone Id 
+    Default: Z05631881PTE1Z2JRRP6J
+  MyDomainName: 
+    Type: String 
+    Description: domain name 
+    Default: buffoonery.io
+
+Resources:
+  Certificate: 
+    # DependsOn: MyHostedZone 
+    Type: AWS::Serverless::Application 
+    Properties: 
+      Location: certificate/template.yaml 
+      Parameters:
+        CertDomainName: !Ref MyDomainName 
+        # HostedZoneId: !GetAtt MyHostedZone.Outputs.HostedZoneId
+        HostedZoneId: !Ref MyHostedZone
+
+  LambdaWebsocket: 
+    Type: AWS::Serverless::Application 
+    Properties:
+      Location: lambda-websocket/template.yaml 
+      Parameters:
+        StageName: !Ref StageName

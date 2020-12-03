@@ -1,0 +1,17 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Stack to deploy Buffoonery's Architecture 
+
+Parameters: 
+  StageName: 
+    Type: String 
+    Description: the development stage 
+
+Resources:
+
+  LambdaWebsocket: 
+    Type: AWS::Serverless::Application 
+    Properties:
+      Location: lambda-websocket/template.yaml 
+      Parameters:
+        StageName: !Ref StageName

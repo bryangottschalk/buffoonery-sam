@@ -1,0 +1,12 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "buffoonery-dev"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND CAPABILITY_NAMED_IAM"
+parameter_overrides = "StageName=\"dev\""
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-2ggs48k5u7je"
+s3_prefix = "buffoonery-dev"
+

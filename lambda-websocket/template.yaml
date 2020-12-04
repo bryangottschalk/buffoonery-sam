@@ -183,7 +183,49 @@ Resources:
       Action: lambda:InvokeFunction
       FunctionName: !Ref SendMessageFunction
       Principal: apigateway.amazonaws.com
+
+  ClientConnectedGetFunction:
+      Type: AWS::Serverless::Function
+      Properties:
+        CodeUri: client-connected-get
+        Handler: index.handler
+        Runtime: nodejs12.x
+        MemorySize: 256
+        Description: A function to get connected clients
+        Environment:
+          Variables:
+            TableName: !Ref GameroomsTable
+        Policies:
+          - DynamoDBReadPolicy:
+              TableName: !Ref GameroomsTable
+        Events:
+          BuffooneryRestApiGet:
+            Type: Api
+            Properties:
+              RestApiId: !Ref BuffooneryRestApiGateway
+              Path: /getconnectedclients/{gameroomId}
+              Method: GET
     
+  BuffooneryRestApiGateway:
+      Type: AWS::Serverless::Api
+      Properties:
+        StageName: !Ref StageName
+        Auth: 
+          ApiKeyRequired: false 
+          UsagePlan: 
+            CreateUsagePlan: PER_API 
+        Cors:
+          AllowMethods: "'GET, POST, PUT, OPTIONS, DELETE'"
+          AllowOrigin: "'*'"
+          AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'"
+      Domain: 
+        DomainName: !Ref BuffooneryApiDomainName
+        # CertificateArn: !Ref ApiCertificateArn
+        EndpointConfiguration: EDGE 
+        BasePath: / 
+        Route53: 
+          HostedZoneId: !Ref HostedZoneId
+
 Outputs:
   GameroomsTableArn:
     Description: "Gamerooms table ARN"

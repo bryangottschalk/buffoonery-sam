@@ -14,7 +14,11 @@ Parameters:
     Type: String 
     Description: domain name 
     Default: buffoonery.io
-
+  BuffooneryApiDomainName: 
+    Type: String 
+    Description: Api Domain 
+    AllowedValues: 
+      - api.buffoonery.io
 Resources:
   Certificate: 
     # DependsOn: MyHostedZone 

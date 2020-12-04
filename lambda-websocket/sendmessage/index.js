@@ -8,7 +8,7 @@ const { TABLE_NAME } = process.env;
 
 exports.handler = async event => {
   const { connectionId } = event.requestContext;
-  console.log('EVENT', event)
+  console.log('EVENT BODY', event.body)
   let connectionData;
   
   try {

@@ -3,19 +3,23 @@ AWS.config.update({ region: process.env.AWS_REGION });
 const ddb = new AWS.DynamoDB.DocumentClient({ apiVersion: '2012-08-10' });
 
 const getGameroom = async (key, tablename) => {
+console.log("🚀 ~ file: index.js ~ line 6 ~ getGameroom ~ tablename", tablename)
     console.log('key', key)
-    console.log('tablename', process.env.TABLE_NAME)
+    console.log('tablename', process.env.TableName)
     const result = await ddb
       .get({
-        TableName: process.env.TableName,
+        TableName: tablename,
         Key: { roomcode: key }
       })
       .promise();
+      console.log("🚀 ~ file: index.js ~ line 10 ~ getGameroom ~ result", result)
+
     return result.Item;
   };
 
 exports.handler = async (event) => {
     console.log('process.env', process.env)
+    console.log('table', process.env.TableName)
     console.log("path", event.pathParameters)
     console.log('querystr', event.queryStringParameters)
     let gameroomId;
@@ -32,7 +36,8 @@ exports.handler = async (event) => {
       };
     }
   
-  const gameroom = await getGameroom(event.pathParameters.gameroomId,);
+  const gameroom = await getGameroom(event.pathParameters.gameroomId, process.env.TableName);
+  console.log("🚀 ~ file: index.js ~ line 38 ~ exports.handler= ~ gameroom", gameroom)
   
   const response = {
     statusCode: 200,

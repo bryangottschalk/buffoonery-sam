@@ -1,19 +1,19 @@
 AWSTemplateFormatVersion: 2010-09-09
 Transform: AWS::Serverless-2016-10-31
-Description: Buffoonery Route53 stack 
+Description: Buffoonery Route53 stack
 
 Parameters:
   MyDomainName:
-    Type: String 
-    Description: the hosted zone to create 
+    Type: String
+    Description: the hosted zone to create
 
-Resources: 
-  GeneratedZone: 
+Resources:
+  GeneratedZone:
     Type: AWS::Route53::HostedZone
-    Properties: 
+    Properties:
       Name: !Ref MyDomainName
 
-Outputs: 
-  HostedZoneId: 
-    Description: the id of the new hosted zone 
-    Value: !Ref GeneratedZone 
+Outputs:
+  HostedZoneId:
+    Description: the id of the new hosted zone
+    Value: !Ref GeneratedZone

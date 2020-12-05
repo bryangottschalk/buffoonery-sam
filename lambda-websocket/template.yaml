@@ -1,31 +1,30 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Websocket API and components 
+Description: Websocket API and components
 
-Parameters: 
-  StageName: 
-    Type: String 
-    Description: the development stage 
+Parameters:
+  StageName:
+    Type: String
+    Description: the development stage
 
 Resources:
-
   GameroomsTable:
     Type: AWS::DynamoDB::Table
     Properties:
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
-      - AttributeName: "roomcode"
-        AttributeType: "S"
+        - AttributeName: 'roomcode'
+          AttributeType: 'S'
       KeySchema:
-      - AttributeName: "roomcode"
-        KeyType: "HASH"
+        - AttributeName: 'roomcode'
+          KeyType: 'HASH'
 
   WebSocketAPI:
     Type: AWS::ApiGatewayV2::Api
     Properties:
       Name: !Sub 'websocket-gamerooms-${StageName}'
       ProtocolType: WEBSOCKET
-      RouteSelectionExpression: "$request.body.action"
+      RouteSelectionExpression: '$request.body.action'
 
   ConnectRoute:
     Type: AWS::ApiGatewayV2::Route
@@ -45,9 +44,8 @@ Resources:
       ApiId: !Ref WebSocketAPI
       Description: Connect Integration
       IntegrationType: AWS_PROXY
-      IntegrationUri: 
-        Fn::Sub:
-            arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${OnConnectFunction.Arn}/invocations
+      IntegrationUri:
+        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${OnConnectFunction.Arn}/invocations
 
   DisconnectRoute:
     Type: AWS::ApiGatewayV2::Route
@@ -67,9 +65,8 @@ Resources:
       ApiId: !Ref WebSocketAPI
       Description: Disconnect Integration
       IntegrationType: AWS_PROXY
-      IntegrationUri: 
-        Fn::Sub:
-            arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${OnDisconnectFunction.Arn}/invocations
+      IntegrationUri:
+        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${OnDisconnectFunction.Arn}/invocations
 
   SendRoute:
     Type: AWS::ApiGatewayV2::Route
@@ -89,16 +86,15 @@ Resources:
       ApiId: !Ref WebSocketAPI
       Description: Send Integration
       IntegrationType: AWS_PROXY
-      IntegrationUri: 
-        Fn::Sub:
-            arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SendMessageFunction.Arn}/invocations
+      IntegrationUri:
+        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SendMessageFunction.Arn}/invocations
 
   Deployment:
     Type: AWS::ApiGatewayV2::Deployment
     DependsOn:
-    - ConnectRoute
-    - SendRoute
-    - DisconnectRoute
+      - ConnectRoute
+      - SendRoute
+      - DisconnectRoute
     Properties:
       ApiId: !Ref WebSocketAPI
 
@@ -121,8 +117,8 @@ Resources:
         Variables:
           TABLE_NAME: !Ref GameroomsTable
       Policies:
-      - DynamoDBCrudPolicy:
-          TableName: !Ref GameroomsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref GameroomsTable
 
   OnConnectPermission:
     Type: AWS::Lambda::Permission
@@ -144,8 +140,8 @@ Resources:
         Variables:
           TABLE_NAME: !Ref GameroomsTable
       Policies:
-      - DynamoDBCrudPolicy:
-          TableName: !Ref GameroomsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref GameroomsTable
 
   OnDisconnectPermission:
     Type: AWS::Lambda::Permission
@@ -167,14 +163,14 @@ Resources:
         Variables:
           TABLE_NAME: !Ref GameroomsTable
       Policies:
-      - DynamoDBCrudPolicy:
-          TableName: !Ref GameroomsTable
-      - Statement:
-        - Effect: Allow
-          Action:
-          - 'execute-api:ManageConnections'
-          Resource:
-          - !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocketAPI}/*'
+        - DynamoDBCrudPolicy:
+            TableName: !Ref GameroomsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - 'execute-api:ManageConnections'
+              Resource:
+                - !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocketAPI}/*'
   SendMessagePermission:
     Type: AWS::Lambda::Permission
     DependsOn:
@@ -185,72 +181,109 @@ Resources:
       Principal: apigateway.amazonaws.com
 
   ClientConnectedGetFunction:
-      Type: AWS::Serverless::Function
-      Properties:
-        CodeUri: client-connected-get
-        Handler: index.handler
-        Runtime: nodejs12.x
-        MemorySize: 256
-        Description: A function to get connected clients
-        Environment:
-          Variables:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: client-connected-get
+      Handler: index.handler
+      Runtime: nodejs12.x
+      MemorySize: 256
+      Description: A function to get connected clients
+      Environment:
+        Variables:
+          TableName: !Ref GameroomsTable
+      Policies:
+        - DynamoDBReadPolicy:
             TableName: !Ref GameroomsTable
-        Policies:
-          - DynamoDBReadPolicy:
-              TableName: !Ref GameroomsTable
-        Events:
-          BuffooneryRestApiGet:
-            Type: Api
-            Properties:
-              RestApiId: !Ref BuffooneryRestApiGateway
-              Path: /getconnectedclients/{gameroomId}
-              Method: GET
-    
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 'execute-api:ManageConnections'
+                - 'execute-api:Invoke'
+              Resource:
+                - !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocketAPI}/*'
+      Events:
+        BuffooneryRestApiGet:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BuffooneryRestApiGateway
+            Path: /getconnectedclients/{gameroomId}
+            Method: GET
+
+  ClientConnectedGetPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+      - WebSocketAPI
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref ClientConnectedGetFunction
+      Principal: apigateway.amazonaws.com
+
   BuffooneryRestApiGateway:
-      Type: AWS::Serverless::Api
-      Properties:
-        StageName: !Ref StageName
-        Auth: 
-          ApiKeyRequired: false 
-          UsagePlan: 
-            CreateUsagePlan: PER_API 
-        Cors:
-          AllowMethods: "'GET, POST, PUT, OPTIONS, DELETE'"
-          AllowOrigin: "'*'"
-          AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'"
-      Domain: 
-        DomainName: !Ref BuffooneryApiDomainName
-        # CertificateArn: !Ref ApiCertificateArn
-        EndpointConfiguration: EDGE 
-        BasePath: / 
-        Route53: 
-          HostedZoneId: !Ref HostedZoneId
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref StageName
+      Auth:
+        ApiKeyRequired: false
+        UsagePlan:
+          CreateUsagePlan: PER_API
+      Cors:
+        AllowMethods: "'GET, POST, PUT, OPTIONS, DELETE'"
+        AllowOrigin: "'*'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'"
+    Domain:
+      DomainName: !Ref BuffooneryApiDomainName
+      # CertificateArn: !Ref ApiCertificateArn
+      EndpointConfiguration: EDGE
+      BasePath: /
+      Route53:
+        HostedZoneId: !Ref HostedZoneId
 
 Outputs:
   GameroomsTableArn:
-    Description: "Gamerooms table ARN"
+    Description: 'Gamerooms table ARN'
     Value: !GetAtt GameroomsTable.Arn
 
   GameroomsTableName:
-    Description: "Gamerooms table ARN"
+    Description: 'Gamerooms table ARN'
     Value: !Ref GameroomsTable
 
   OnConnectFunctionArn:
-    Description: "OnConnect function ARN"
+    Description: 'OnConnect function ARN'
     Value: !GetAtt OnConnectFunction.Arn
 
   OnDisconnectFunctionArn:
-    Description: "OnDisconnect function ARN"
+    Description: 'OnDisconnect function ARN'
     Value: !GetAtt OnDisconnectFunction.Arn
 
   SendMessageFunctionArn:
-    Description: "SendMessage function ARN"
+    Description: 'SendMessage function ARN'
     Value: !GetAtt SendMessageFunction.Arn
 
-  WSAPIDomain: 
-    Description: "The WebSocket api domain"
-    Value: !Join [ '', [ !Ref WebSocketAPI, '.execute-api.',!Ref 'AWS::Region','.amazonaws.com'] ]
+  WSAPIDomain:
+    Description: 'The WebSocket api domain'
+    Value:
+      !Join [
+        '',
+        [
+          !Ref WebSocketAPI,
+          '.execute-api.',
+          !Ref 'AWS::Region',
+          '.amazonaws.com'
+        ]
+      ]
 
   WebSocketURI:
-    Description: "The WSS Protocol URI to connect to"
-    Value: !Join [ '', [ 'wss://', !Ref WebSocketAPI, '.execute-api.',!Ref 'AWS::Region','.amazonaws.com/',!Ref 'Stage'] ]
+    Description: 'The WSS Protocol URI to connect to'
+    Value:
+      !Join [
+        '',
+        [
+          'wss://',
+          !Ref WebSocketAPI,
+          '.execute-api.',
+          !Ref 'AWS::Region',
+          '.amazonaws.com/',
+          !Ref 'Stage'
+        ]
+      ]

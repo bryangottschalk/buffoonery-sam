@@ -3,13 +3,16 @@
 
 // https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-websocket-api-route-keys-connect-disconnect.html
 // The $disconnect route is executed after the connection is closed.
-// The connection can be closed by the server or by the client. As the connection is already closed when it is executed, 
-// $disconnect is a best-effort event. 
+// The connection can be closed by the server or by the client. As the connection is already closed when it is executed,
+// $disconnect is a best-effort event.
 // API Gateway will try its best to deliver the $disconnect event to your integration, but it cannot guarantee delivery.
 
 const AWS = require('aws-sdk');
 
-const ddb = new AWS.DynamoDB.DocumentClient({ apiVersion: '2012-08-10', region: process.env.AWS_REGION });
+const ddb = new AWS.DynamoDB.DocumentClient({
+  apiVersion: '2012-08-10',
+  region: process.env.AWS_REGION
+});
 
 const getGameroom = async (key) => {
   const result = await ddb
@@ -35,24 +38,28 @@ const saveGameroom = async function (room) {
   }
 };
 
-exports.handler = async event => {
+exports.handler = async (event) => {
   let roomcode, room;
-  const allData = await ddb.scan({ TableName: process.env.TABLE_NAME }).promise();
-  console.log('all data', allData)
-  allData.Items.forEach(d => {
-    d.connectedClients.forEach(client => {
+  const allData = await ddb
+    .scan({ TableName: process.env.TABLE_NAME })
+    .promise();
+  console.log('all data', allData);
+  allData.Items.forEach((d) => {
+    d.connectedClients.forEach((client) => {
       if (client === event.requestContext.connectionId) {
-        console.log('found a match!')
+        console.log('found a match!');
         room = d;
-        d.connectedClients = d.connectedClients.filter(connectionId => connectionId !== client);
-        console.log(`roomcode=${d.roomcode}`)
+        d.connectedClients = d.connectedClients.filter(
+          (connectionId) => connectionId !== client
+        );
+        console.log(`roomcode=${d.roomcode}`);
         roomcode = d.roomcode;
       }
-    })
-  })
+    });
+  });
 
   if (roomcode) {
-    saveGameroom(room)
+    saveGameroom(room);
   }
 
   const deleteParams = {
@@ -65,7 +72,10 @@ exports.handler = async event => {
   try {
     await ddb.delete(deleteParams).promise();
   } catch (err) {
-    return { statusCode: 500, body: 'Failed to disconnect: ' + JSON.stringify(err) };
+    return {
+      statusCode: 500,
+      body: 'Failed to disconnect: ' + JSON.stringify(err)
+    };
   }
 
   return { statusCode: 200, body: 'Disconnected.' };

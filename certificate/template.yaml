@@ -9,7 +9,9 @@ Parameters:
   HostedZoneId: 
     Type: String 
     Description: id of the hosted zone for the cert domain 
-
+  StageName:
+    Type: String
+    Description: the development stage
 Resources:
 
   GeneratedCert: # If a Certificate ARN is not passed in the parameters, then a new cert is created and will required validation during the deploy

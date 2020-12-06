@@ -1,34 +1,47 @@
 const AWS = require('aws-sdk');
-AWS.config.update({ region: process.env.AWS_REGION });
 const ddb = new AWS.DynamoDB.DocumentClient({ apiVersion: '2012-08-10' });
-
+var https = require('https');
 const getGameroom = async (key, tablename) => {
-  console.log(
-    '🚀 ~ file: index.js ~ line 6 ~ getGameroom ~ tablename',
-    tablename
-  );
-  console.log('key', key);
-  console.log('tablename', process.env.TableName);
   const result = await ddb
     .get({
       TableName: tablename,
       Key: { roomcode: key }
     })
     .promise();
-  console.log('🚀 ~ file: index.js ~ line 10 ~ getGameroom ~ result', result);
 
   return result.Item;
 };
 
-exports.handler = async (event) => {
+function request(options, data) {
+  return new Promise((resolve, reject) => {
+    var req = https.request(options, function (res) {
+      res.setEncoding('utf8');
+      let responseBody = '';
+      res.on('data', function (chunk) {
+        responseBody += chunk;
+      });
+      res.on('end', () => {
+        resolve(JSON.parse(responseBody));
+      });
+    }).on('error', function (e) {
+      reject(e);
+    });
+
+    req.write(JSON.stringify(data));
+    req.end();
+  });
+}
+
+exports.handler = async (event, context) => {
+  console.log('context', context)
   console.log(
     '🚀 ~ file: index.js ~ line 24 ~ exports.handler= ~ event',
     event
   );
-  const apigwManagementApi = new AWS.ApiGatewayManagementApi({
-    apiVersion: '2018-11-29',
-    endpoint: event.requestContext.domainName + '/' + event.requestContext.stage
-  });
+  // const apigwManagementApi = new AWS.ApiGatewayManagementApi({
+  //   apiVersion: '2018-11-29',
+  //   endpoint: event.requestContext.domainName + '/' + event.requestContext.stage
+  // });
   console.log('process.env', process.env);
   console.log('table', process.env.TableName);
   console.log('path', event.pathParameters);
@@ -47,7 +60,7 @@ exports.handler = async (event) => {
   const gameroom = await getGameroom(gameroomId, process.env.TableName);
 
   console.log(
-    '🚀 ~ file: index.js ~ line 38 ~ exports.handler= ~ gameroom',
+    'gameroom:',
     gameroom
   );
   if (
@@ -56,14 +69,27 @@ exports.handler = async (event) => {
     gameroom.connectedClients.length > 0
   ) {
     const postCalls = gameroom.connectedClients.map(async (connectionId) => {
-      console.log('🚀 ~ file: index.js ~ line 58 ~ connectionId', connectionId);
+      console.log('connectionId:', connectionId);
+      const objToPost = JSON.stringify({
+        ConnectionId: connectionId,
+        Data: connectionId
+      })
+      console.log('objToPost', objToPost)
       try {
-        await apigwManagementApi
-          .postToConnection({
-            ConnectionId: connectionId,
-            Data: connectionId
-          })
-          .promise();
+        // await apigwManagementApi
+        //   .postToConnection({ConnectionId: connectionId,
+        //     Data: `${connectionId} has connected.`})
+        //   .promise();
+        var options = {
+          host: 'da6wisihu2.execute-api.us-east-1.amazonaws.com',
+          path: '/dev/@connection',
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        };
+        await request(options, objToPost);
+
       } catch (e) {
         if (e.statusCode === 410) {
           console.log(`Found stale connection, deleting ${roomcode}`);

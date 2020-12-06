@@ -6,8 +6,57 @@ Parameters:
   StageName:
     Type: String
     Description: the development stage
+  CertArn: 
+    Type: String 
+    Description: Certificate Manager Arn for the ssl cert if one has already been created 
+    Default: none
+  MyDomainName: 
+    Type: String 
+    Description: Api Domain
+  ApiSubdomain:
+    Type: String
+    Description: Api Domain
+    AllowedValues:
+      - api
+  HostedZoneId: 
+    Type: String 
+    Description: Route53 Hosted zone ID if one has already been created 
+
+Conditions:
+  CreateCert:
+    !Equals [!Ref CertArn, 'none']
+
+Globals:
+  Function:
+    Timeout: 5
+    Handler: index.handler
+    Runtime: nodejs12.x
 
 Resources:
+  GeneratedCert: # If a Certificate ARN is not passed in the parameters, then a new cert is created and will required validation during the deploy
+    Type: AWS::CertificateManager::Certificate
+    Condition: CreateCert
+    Properties: 
+      DomainName: !Ref MyDomainName
+      DomainValidationOptions: 
+        - DomainName: !Ref MyDomainName 
+          HostedZoneId: !Ref HostedZoneId 
+      SubjectAlternativeNames: 
+        - !Sub '*.${MyDomainName}'
+      ValidationMethod: DNS
+      
+  RestApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref StageName
+      Domain:
+        DomainName: !Sub '${StageName}-${ApiSubdomain}.${MyDomainName}' # ie: dev-api.buffoonery.io
+        CertificateArn: !If [CreateCert, !Ref GeneratedCert, !Ref CertArn]
+        EndpointConfiguration: EDGE 
+        BasePath: / 
+        Route53:
+          HostedZoneId: !Ref HostedZoneId
+
   GameroomsTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -192,10 +241,9 @@ Resources:
         Variables:
           TableName: !Ref GameroomsTable
       Policies:
-        - DynamoDBReadPolicy:
+        - DynamoDBCrudPolicy:
             TableName: !Ref GameroomsTable
-        - Version: '2012-10-17'
-          Statement:
+        - Statement:
             - Effect: Allow
               Action:
                 - 'execute-api:ManageConnections'
@@ -206,7 +254,7 @@ Resources:
         BuffooneryRestApiGet:
           Type: Api
           Properties:
-            RestApiId: !Ref BuffooneryRestApiGateway
+            RestApiId: !Ref RestApiGateway
             Path: /getconnectedclients/{gameroomId}
             Method: GET
 
@@ -218,28 +266,12 @@ Resources:
       Action: lambda:InvokeFunction
       FunctionName: !Ref ClientConnectedGetFunction
       Principal: apigateway.amazonaws.com
-
-  BuffooneryRestApiGateway:
-    Type: AWS::Serverless::Api
-    Properties:
-      StageName: !Ref StageName
-      Auth:
-        ApiKeyRequired: false
-        UsagePlan:
-          CreateUsagePlan: PER_API
-      Cors:
-        AllowMethods: "'GET, POST, PUT, OPTIONS, DELETE'"
-        AllowOrigin: "'*'"
-        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'"
-    Domain:
-      DomainName: !Ref BuffooneryApiDomainName
-      # CertificateArn: !Ref ApiCertificateArn
-      EndpointConfiguration: EDGE
-      BasePath: /
-      Route53:
-        HostedZoneId: !Ref HostedZoneId
-
+    
 Outputs:
+  ApiEndpoint:
+    Description: "REST API endpoint URL"
+    Value: !Sub "https://${RestApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${StageName}/"
+
   GameroomsTableArn:
     Description: 'Gamerooms table ARN'
     Value: !GetAtt GameroomsTable.Arn

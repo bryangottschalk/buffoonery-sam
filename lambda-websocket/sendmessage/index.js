@@ -11,7 +11,7 @@ const { TABLE_NAME } = process.env;
 
 exports.handler = async (event) => {
   const { connectionId } = event.requestContext;
-  console.log('EVENT BODY', event.body);
+  console.log('EVENT:', body);
   let connectionData;
 
   try {
@@ -27,7 +27,7 @@ exports.handler = async (event) => {
     apiVersion: '2018-11-29',
     endpoint: event.requestContext.domainName + '/' + event.requestContext.stage
   });
-
+  console.log('api:', apigwManagementApi)
   const postData = JSON.parse(event.body).data;
   await apigwManagementApi
     .postToConnection({

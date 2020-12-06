@@ -14,21 +14,14 @@ Parameters:
     Type: String
     Description: domain name
     Default: buffoonery.io
-  BuffooneryApiDomainName:
+  ApiSubdomain:
     Type: String
     Description: Api Domain
     AllowedValues:
-      - api.buffoonery.io
+      - api
+
 Resources:
-  Certificate:
-    # DependsOn: MyHostedZone
-    Type: AWS::Serverless::Application
-    Properties:
-      Location: certificate/template.yaml
-      Parameters:
-        CertDomainName: !Ref MyDomainName
-        # HostedZoneId: !GetAtt MyHostedZone.Outputs.HostedZoneId
-        HostedZoneId: !Ref MyHostedZone
+
 
   LambdaWebsocket:
     Type: AWS::Serverless::Application
@@ -36,3 +29,32 @@ Resources:
       Location: lambda-websocket/template.yaml
       Parameters:
         StageName: !Ref StageName
+        # ApiCertificateArn: !GetAtt Certificate.Outputs.CertificateArn  
+        MyDomainName: !Ref MyDomainName 
+        ApiSubdomain: !Ref ApiSubdomain
+        HostedZoneId: !Ref MyHostedZone
+  
+  # no longer being used
+
+  # Certificate:
+  #   # DependsOn: MyHostedZone
+  #   Type: AWS::Serverless::Application
+  #   Properties:
+  #     Location: certificate/template.yaml
+  #     Parameters:
+  #       StageName: !Ref StageName
+  #       CertDomainName: !Ref MyDomainName
+  #       # HostedZoneId: !GetAtt MyHostedZone.Outputs.HostedZoneId
+  #       HostedZoneId: !Ref MyHostedZone
+
+  # Route53:
+  #   Type: AWS::Serverless::Application
+  #   Properties:
+  #     Location: route53/template.yaml
+  #     Parameters:
+  #       StageName: !Ref StageName
+  #       ApiCertificateArn: !GetAtt Certificate.Outputs.CertificateArn  
+  #       MyDomainName: !Ref MyDomainName 
+  #       ApiSubdomain: !Ref ApiSubdomain
+  #       HostedZoneId: !Ref MyHostedZone
+  

@@ -9,50 +9,59 @@ const ddb = new AWS.DynamoDB.DocumentClient({
 
 const { TABLE_NAME } = process.env;
 
+const getGameroom = async (key, tablename) => {
+  const result = await ddb
+    .get({
+      TableName: tablename,
+      Key: { roomcode: key }
+    })
+    .promise();
+  return result.Item;
+};
+
 exports.handler = async (event) => {
-  const { connectionId } = event.requestContext;
-  console.log('EVENT:', body);
-  let connectionData;
-
-  try {
-    connectionData = await ddb
-      .scan({ TableName: TABLE_NAME, ProjectionExpression: 'roomcode' })
-      .promise();
-    console.log('connectionData:', connectionData);
-  } catch (e) {
-    return { statusCode: 500, body: e.stack };
+  if (event.Records) {
+    const message = event.Records[0].Sns.Message;
+    console.log('IS SNS MESSAGE:', message)
   }
-
+  console.log('event', event)
   const apigwManagementApi = new AWS.ApiGatewayManagementApi({
     apiVersion: '2018-11-29',
     endpoint: event.requestContext.domainName + '/' + event.requestContext.stage
   });
-  console.log('api:', apigwManagementApi)
+  const { connectionId } = event.requestContext;
   const postData = JSON.parse(event.body).data;
+  let gameroom;
+  if (postData && postData.roomcode) {
+    gameroom = await getGameroom(postData.roomcode, process.env.TABLE_NAME);
+    console.log('GAMEROOM:', gameroom)
+  }
   await apigwManagementApi
     .postToConnection({
       ConnectionId: connectionId,
       Data: 'This is a reply to your message'
     })
     .promise();
-  console.log('postData', postData);
 
-  const postCalls = connectionData.Items.map(async ({ roomcode }) => {
-    try {
-      await apigwManagementApi
-        .postToConnection({ roomcode: roomcode, Data: postData })
-        .promise();
-    } catch (e) {
-      if (e.statusCode === 410) {
-        console.log(`Found stale connection, deleting ${roomcode}`);
-        await ddb
-          .delete({ TableName: TABLE_NAME, Key: { roomcode } })
+  if (gameroom && gameroom.connectedClients.length > 0) {
+    gameroom.connectedClients.map(async (connectionId) => {
+      try {
+        await apigwManagementApi
+          .postToConnection({ ConnectionId: connectionId, Data: postData.msg })
           .promise();
-      } else {
-        throw e;
+      } catch (e) {
+        if (e.statusCode === 410) {
+          console.log(`Found stale connection, deleting ${roomcode}`);
+          await ddb
+            .delete({ TableName: TABLE_NAME, Key: { roomcode } })
+            .promise();
+        } else {
+          throw e;
+        }
       }
-    }
-  });
+    });
+  }
+
 
   try {
     await Promise.all(postCalls);

@@ -8,7 +8,7 @@
 // API Gateway will try its best to deliver the $disconnect event to your integration, but it cannot guarantee delivery.
 
 const AWS = require('aws-sdk');
-
+var https = require('https');
 const ddb = new AWS.DynamoDB.DocumentClient({
   apiVersion: '2012-08-10',
   region: process.env.AWS_REGION
@@ -32,13 +32,13 @@ const saveGameroom = async function (room) {
         Item: room
       })
       .promise();
-    logIt('saveToDDB success');
+    console.log('saveToDDB success');
   } catch (err) {
     console.error('saveToDDB error: ', err);
   }
 };
 
-exports.handler = async (event) => {
+exports.handler = async (event, context) => {
   let roomcode, room;
   const allData = await ddb
     .scan({ TableName: process.env.TABLE_NAME })
@@ -49,11 +49,12 @@ exports.handler = async (event) => {
       if (client === event.requestContext.connectionId) {
         console.log('found a match!');
         room = d;
-        d.connectedClients = d.connectedClients.filter(
+        room.connectedClients = room.connectedClients.filter(
           (connectionId) => connectionId !== client
         );
-        console.log(`roomcode=${d.roomcode}`);
-        roomcode = d.roomcode;
+        console.log(`roomcode=${room.roomcode}`);
+        console.log('ROOM', room)
+        roomcode = room.roomcode;
       }
     });
   });
@@ -62,6 +63,24 @@ exports.handler = async (event) => {
     saveGameroom(room);
   }
 
+  // notify all clients in room of disconnection
+  if (room && room.connectedClients.length > 0) {
+    const postCalls = room.connectedClients.map(async (connectionId) => {
+      console.log('invoking SNS topic to trigger sendmessage lambda...')
+      var params = {
+        Message: `Client disconnected from room ${room.roomcode} ${connectionId}`,
+        TopicArn: 'arn:aws:sns:us-east-1:695097972413:ClientDisconnected'
+      };
+      
+      return await new AWS.SNS({apiVersion: '2010-03-31'}).publish(params).promise();
+    })
+    console.log('postCalls', postCalls)
+    try {
+      await Promise.all(postCalls);
+    } catch(err) {
+      console.log('error publishing SNS topic', err)
+    }
+  }
   const deleteParams = {
     TableName: process.env.TABLE_NAME,
     Key: {

@@ -191,6 +191,8 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref GameroomsTable
+        - SNSCrudPolicy:
+            TopicName: ClientDisconnected
 
   OnDisconnectPermission:
     Type: AWS::Lambda::Permission
@@ -228,7 +230,7 @@ Resources:
       Action: lambda:InvokeFunction
       FunctionName: !Ref SendMessageFunction
       Principal: apigateway.amazonaws.com
-
+      
   ClientConnectedGetFunction:
     Type: AWS::Serverless::Function
     Properties:

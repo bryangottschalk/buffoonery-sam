@@ -71,8 +71,7 @@ exports.handler = async (event, context) => {
     const postCalls = gameroom.connectedClients.map(async (connectionId) => {
       console.log('connectionId:', connectionId);
       const objToPost = JSON.stringify({
-        ConnectionId: connectionId,
-        Data: connectionId
+        action: 'sendmessage', data: `CLIENT CONNECTED ${connectionId}`
       })
       console.log('objToPost', objToPost)
       try {
@@ -88,7 +87,7 @@ exports.handler = async (event, context) => {
             'Content-Type': 'application/json'
           }
         };
-        await request(options, objToPost);
+        await request(options, objToPost)
 
       } catch (e) {
         if (e.statusCode === 410) {
@@ -101,6 +100,7 @@ exports.handler = async (event, context) => {
         }
       }
     });
+    console.log('postCalls', postCalls)
     await Promise.all(postCalls);
   }
   const response = {

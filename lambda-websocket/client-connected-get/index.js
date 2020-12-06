@@ -75,10 +75,6 @@ exports.handler = async (event, context) => {
       })
       console.log('objToPost', objToPost)
       try {
-        // await apigwManagementApi
-        //   .postToConnection({ConnectionId: connectionId,
-        //     Data: `${connectionId} has connected.`})
-        //   .promise();
         var options = {
           host: 'da6wisihu2.execute-api.us-east-1.amazonaws.com',
           path: '/dev/@connection',

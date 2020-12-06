@@ -20,30 +20,69 @@ const getGameroom = async (key, tablename) => {
 };
 
 exports.handler = async (event) => {
-  if (event.Records) {
-    const message = event.Records[0].Sns.Message;
-    console.log('IS SNS MESSAGE:', message)
-  }
-  console.log('event', event)
+  console.log('EVENT:', event)
+  console.log('process.env', process.env)
   const apigwManagementApi = new AWS.ApiGatewayManagementApi({
     apiVersion: '2018-11-29',
-    endpoint: event.requestContext.domainName + '/' + event.requestContext.stage
+    endpoint: 'da6wisihu2.execute-api.us-east-1.amazonaws.com' + '/' + 'dev'
   });
-  const { connectionId } = event.requestContext;
-  const postData = JSON.parse(event.body).data;
-  let gameroom;
+  let postData, gameroom;
+
+  if (event.body) {
+    postData = JSON.parse(event.body).data;
+  }
+  
   if (postData && postData.roomcode) {
     gameroom = await getGameroom(postData.roomcode, process.env.TABLE_NAME);
+  } 
+
+
+
+  console.log('GAMEROOM:', gameroom)
+
+
+
+
+  if (event.Records && event.Records[0] && event.Records[0].Sns &&  event.Records[0].Sns.Message) {
+    // message is connectionId that has disconnected from a room, ondisconnect publishes to sns topic which triggers this msg
+    const disconnectedId = event.Records[0].Sns.Message; // ALSO INCLUDES ROOMCODE IN THE STRING &roomcode =
+    console.log('disconnectedId', disconnectedId)
+    const roomcode = disconnectedId.slice(disconnectedId.indexOf('&roomcode=') + 10, disconnectedId.length);
+    console.log('roomcode from SNS disconnect', roomcode)
+    try {
+      gameroom = await getGameroom(roomcode, process.env.TABLE_NAME);
+    } catch (err) {
+      console.log('error getting gameroom with roomcode', err)
+    }
     console.log('GAMEROOM:', gameroom)
+    console.log('IS SNS MESSAGE, DISCONNECTING CLIENT ID', disconnectedId )
+    if (gameroom && gameroom.connectedClients.length > 0) { 
+      // inform other clients in the room that a client has disconnected
+      gameroom.connectedClients.map(async(connectionId) => {
+        try {
+          await apigwManagementApi
+          .postToConnection({
+            ConnectionId: connectionId,
+            Data: `Client ${disconnectedId} has disconnected.`
+          })
+          .promise();
+        } catch (e) {
+          if (e.statusCode === 410) {
+            console.log(`Found stale connection, deleting ${roomcode}`);
+            await ddb
+              .delete({ TableName: TABLE_NAME, Key: { roomcode } })
+              .promise();
+          } else {
+            throw e;
+          }
+        }
+      })
+    }
+    return { statusCode: 200, body: 'Data sent.' };
   }
-  await apigwManagementApi
-    .postToConnection({
-      ConnectionId: connectionId,
-      Data: 'This is a reply to your message'
-    })
-    .promise();
 
   if (gameroom && gameroom.connectedClients.length > 0) {
+    console.log('informing clients of new connection')
     gameroom.connectedClients.map(async (connectionId) => {
       try {
         await apigwManagementApi
@@ -62,12 +101,14 @@ exports.handler = async (event) => {
     });
   }
 
-
-  try {
-    await Promise.all(postCalls);
-  } catch (e) {
-    return { statusCode: 500, body: e.stack };
-  }
-
+  
   return { statusCode: 200, body: 'Data sent.' };
+
+  // await apigwManagementApi
+  // .postToConnection({
+  //   ConnectionId: connectionId,
+  //   Data: 'This is a reply to your message'
+  // })
+  // .promise();
+
 };

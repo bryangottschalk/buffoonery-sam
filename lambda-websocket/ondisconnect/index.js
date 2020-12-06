@@ -68,7 +68,7 @@ exports.handler = async (event, context) => {
     const postCalls = room.connectedClients.map(async (connectionId) => {
       console.log('invoking SNS topic to trigger sendmessage lambda...')
       var params = {
-        Message: `Client disconnected from room ${room.roomcode} ${connectionId}`,
+        Message: `${connectionId}&roomcode=${roomcode}`,
         TopicArn: 'arn:aws:sns:us-east-1:695097972413:ClientDisconnected'
       };
       

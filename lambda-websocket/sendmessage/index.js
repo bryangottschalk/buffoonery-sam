@@ -22,6 +22,7 @@ const getGameroom = async (key, tablename) => {
 exports.handler = async (event) => {
   console.log('EVENT:', event)
   console.log('process.env', process.env)
+
   const apigwManagementApi = new AWS.ApiGatewayManagementApi({
     apiVersion: '2018-11-29',
     endpoint: 'da6wisihu2.execute-api.us-east-1.amazonaws.com' + '/' + 'dev'
@@ -45,8 +46,7 @@ exports.handler = async (event) => {
 
   if (event.Records && event.Records[0] && event.Records[0].Sns && event.Records[0].Sns.Message) {
     console.log('SNS MESSAGE', event.Records[0].Sns.Message)
-    // message is connectionId that has disconnected from a room, ondisconnect publishes to sns topic which triggers this msg
-    const snsMessage = event.Records[0].Sns.Message; // ALSO INCLUDES ROOMCODE IN THE STRING &roomcode =
+    const snsMessage = event.Records[0].Sns.Message;
     console.log('snsMessage', snsMessage)
     const roomcode = JSON.parse(snsMessage).roomcode;
     console.log('roomcode from SNS disconnect', roomcode)
@@ -58,11 +58,11 @@ exports.handler = async (event) => {
     console.log('GAMEROOM:', gameroom)
     if (gameroom && gameroom.connectedClients.length > 0) {
       // inform other clients in the room that a client has disconnected
-      gameroom.connectedClients.map(async (connectionId) => {
+      gameroom.connectedClients.map(async (client) => {
         try {
           await apigwManagementApi
             .postToConnection({
-              ConnectionId: connectionId,
+              ConnectionId: client.connectionId,
               Data: JSON.stringify(snsMessage),
             })
             .promise();
@@ -78,37 +78,6 @@ exports.handler = async (event) => {
         }
       })
     }
-    return { statusCode: 200, body: 'Data sent.' };
   }
-
-  if (gameroom && gameroom.connectedClients.length > 0) {
-    console.log('informing clients of new connection')
-    gameroom.connectedClients.map(async (connectionId) => {
-      try {
-        await apigwManagementApi
-          .postToConnection({ ConnectionId: connectionId, Data: postData.msg })
-          .promise();
-      } catch (e) {
-        if (e.statusCode === 410) {
-          console.log(`Found stale connection, deleting ${roomcode}`);
-          await ddb
-            .delete({ TableName: TABLE_NAME, Key: { roomcode } })
-            .promise();
-        } else {
-          throw e;
-        }
-      }
-    });
-  }
-
-
   return { statusCode: 200, body: 'Data sent.' };
-
-  // await apigwManagementApi
-  // .postToConnection({
-  //   ConnectionId: connectionId,
-  //   Data: 'This is a reply to your message'
-  // })
-  // .promise();
-
 };

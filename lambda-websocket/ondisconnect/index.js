@@ -46,11 +46,11 @@ exports.handler = async (event, context) => {
   console.log('all data', allData);
   allData.Items.forEach((d) => {
     d.connectedClients.forEach((client) => {
-      if (client === event.requestContext.connectionId) {
+      if (client.connectionId === event.requestContext.connectionId) {
         console.log('found a match!');
         room = d;
         room.connectedClients = room.connectedClients.filter(
-          (connectionId) => connectionId !== client
+          (c) => c.connectionId !== client.connectionId
         );
         console.log(`roomcode=${room.roomcode}`);
         console.log('ROOM', room)
@@ -65,14 +65,14 @@ exports.handler = async (event, context) => {
 
   // notify all clients in room of disconnection
   if (room && room.connectedClients.length > 0) {
-    const postCalls = room.connectedClients.map(async (connectionId) => {
+    const postCalls = room.connectedClients.map(async (client) => {
       console.log('invoking SNS topic to trigger sendmessage lambda...')
       var params = {
         Message: JSON.stringify({
-          msg: `Client ${connectionId} has disconnected.`,
+          msg: `Client ${client.connectionId} has disconnected.`,
           roomcode,
           topic: 'Client Disconnected',
-          connectionId
+          connectionId: client.connectionId
         }),
         TopicArn: 'arn:aws:sns:us-east-1:695097972413:ClientDisconnected',
       };

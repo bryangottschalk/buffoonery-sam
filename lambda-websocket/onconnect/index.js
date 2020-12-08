@@ -40,11 +40,10 @@ const validateGameroom = (gameroom) => {
 };
 
 exports.handler = async (event) => {
-  let roomcode;
+  let roomcode, name;
   if (event.queryStringParameters) {
     roomcode = event.queryStringParameters.roomcode;
-  } else {
-    roomcode = 'ABCD';
+    name = event.queryStringParameters.name;
   }
   if (!roomcode) {
     throw new Error('roomcode must be supplied to identify gameroom');
@@ -53,14 +52,20 @@ exports.handler = async (event) => {
   if (!gameroom && roomcode) {
     gameroom = new Gameroom(roomcode);
     gameroom.connectedClients.push(
-      String(`${event.requestContext.connectionId}`)
+      {
+        id: String(`${event.requestContext.connectionId}`),
+        name: name
+      }
     );
     console.log('🚀 ~ file: index.js ~ line 43 ~ gameroom', gameroom);
   } else {
     console.log('FOUND GAMEROOM');
     gameroom = validateGameroom(gameroom);
     gameroom.connectedClients.push(
-      String(`${event.requestContext.connectionId}`)
+      {
+        id: String(`${event.requestContext.connectionId}`),
+        name: name
+      }
     );
   }
   console.log('🚀 ~ file: index.js ~ line 61 ~ gameroom', gameroom);
@@ -69,14 +74,15 @@ exports.handler = async (event) => {
 
   // notify all clients in room of connection
   if (gameroom && gameroom.connectedClients.length > 0) {
-    const postCalls = gameroom.connectedClients.map(async (connectionId) => {
+    const postCalls = gameroom.connectedClients.map(async (client) => {
       console.log('invoking SNS topic to trigger sendmessage lambda...')
       var params = {
         Message: JSON.stringify({
-          msg: `Client ${connectionId} has connected.`,
+          msg: `Client ${client.connectionId} has connected - name: ${client.name}`,
+          name: client.name,
           roomcode,
           topic: 'Client Connected',
-          connectionId
+          client: client.connectionId
         }),
         TopicArn: 'arn:aws:sns:us-east-1:695097972413:ClientConnected',
       };

@@ -68,16 +68,21 @@ exports.handler = async (event, context) => {
     const postCalls = room.connectedClients.map(async (connectionId) => {
       console.log('invoking SNS topic to trigger sendmessage lambda...')
       var params = {
-        Message: `${connectionId}&roomcode=${roomcode}`,
-        TopicArn: 'arn:aws:sns:us-east-1:695097972413:ClientDisconnected'
+        Message: JSON.stringify({
+          msg: `Client ${connectionId} has disconnected.`,
+          roomcode,
+          topic: 'Client Disconnected',
+          connectionId
+        }),
+        TopicArn: 'arn:aws:sns:us-east-1:695097972413:ClientDisconnected',
       };
-      
-      return await new AWS.SNS({apiVersion: '2010-03-31'}).publish(params).promise();
+
+      return await new AWS.SNS({ apiVersion: '2010-03-31' }).publish(params).promise();
     })
     console.log('postCalls', postCalls)
     try {
       await Promise.all(postCalls);
-    } catch(err) {
+    } catch (err) {
       console.log('error publishing SNS topic', err)
     }
   }

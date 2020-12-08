@@ -22,27 +22,27 @@ exports.handler = async (event, context) => {
   console.log('table', process.env.TableName);
   console.log('path', event.pathParameters);
   console.log('querystr', event.queryStringParameters);
-  let gameroomId;
-  if (event.pathParameters && event.pathParameters.gameroomId) {
-    gameroomId = event.pathParameters.gameroomId;
-  } else if (event.queryParameters && event.queryParameters.gameroomId) {
-    gameroomId = event.queryParameters.gameroomId;
+  let roomcode;
+  if (event.pathParameters && event.pathParameters.roomcode) {
+    roomcode = event.pathParameters.roomcode;
+  } else if (event.queryParameters && event.queryParameters.roomcode) {
+    roomcode = event.queryParameters.roomcode;
   } else {
     return {
       statusCode: 404
     };
   }
 
-  const gameroom = await getGameroom(gameroomId, process.env.TableName);
+  const gameroom = await getGameroom(roomcode, process.env.TableName);
 
   console.log('gameroom:', gameroom);
 
   const response = {
     statusCode: 200,
     body:
-      gameroom && gameroom.connectedClients
-        ? JSON.stringify(gameroom.connectedClients)
-        : [],
+      gameroom
+        ? JSON.stringify(gameroom)
+        : {},
     headers: {
       'Access-Control-Allow-Headers': '*',
       'Access-Control-Allow-Origin': '*',

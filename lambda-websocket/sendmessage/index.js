@@ -31,10 +31,10 @@ exports.handler = async (event) => {
   if (event.body) {
     postData = JSON.parse(event.body).data;
   }
-  
+
   if (postData && postData.roomcode) {
     gameroom = await getGameroom(postData.roomcode, process.env.TABLE_NAME);
-  } 
+  }
 
 
 
@@ -43,11 +43,12 @@ exports.handler = async (event) => {
 
 
 
-  if (event.Records && event.Records[0] && event.Records[0].Sns &&  event.Records[0].Sns.Message) {
+  if (event.Records && event.Records[0] && event.Records[0].Sns && event.Records[0].Sns.Message) {
+    console.log('SNS MESSAGE', event.Records[0].Sns.Message)
     // message is connectionId that has disconnected from a room, ondisconnect publishes to sns topic which triggers this msg
-    const disconnectedId = event.Records[0].Sns.Message; // ALSO INCLUDES ROOMCODE IN THE STRING &roomcode =
-    console.log('disconnectedId', disconnectedId)
-    const roomcode = disconnectedId.slice(disconnectedId.indexOf('&roomcode=') + 10, disconnectedId.length);
+    const snsMessage = event.Records[0].Sns.Message; // ALSO INCLUDES ROOMCODE IN THE STRING &roomcode =
+    console.log('snsMessage', snsMessage)
+    const roomcode = JSON.parse(snsMessage).roomcode;
     console.log('roomcode from SNS disconnect', roomcode)
     try {
       gameroom = await getGameroom(roomcode, process.env.TABLE_NAME);
@@ -55,17 +56,16 @@ exports.handler = async (event) => {
       console.log('error getting gameroom with roomcode', err)
     }
     console.log('GAMEROOM:', gameroom)
-    console.log('IS SNS MESSAGE, DISCONNECTING CLIENT ID', disconnectedId )
-    if (gameroom && gameroom.connectedClients.length > 0) { 
+    if (gameroom && gameroom.connectedClients.length > 0) {
       // inform other clients in the room that a client has disconnected
-      gameroom.connectedClients.map(async(connectionId) => {
+      gameroom.connectedClients.map(async (connectionId) => {
         try {
           await apigwManagementApi
-          .postToConnection({
-            ConnectionId: connectionId,
-            Data: `Client ${disconnectedId} has disconnected.`
-          })
-          .promise();
+            .postToConnection({
+              ConnectionId: connectionId,
+              Data: JSON.stringify(snsMessage),
+            })
+            .promise();
         } catch (e) {
           if (e.statusCode === 410) {
             console.log(`Found stale connection, deleting ${roomcode}`);
@@ -101,7 +101,7 @@ exports.handler = async (event) => {
     });
   }
 
-  
+
   return { statusCode: 200, body: 'Data sent.' };
 
   // await apigwManagementApi

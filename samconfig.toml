@@ -9,4 +9,3 @@ capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND CAPABILITY_NAMED_IAM"
 parameter_overrides = "StageName=\"dev\" MyHostedZone=\"Z05631881PTE1Z2JRRP6J\" MyDomainName=\"buffoonery.io\" ApiSubdomain=\"api\""
 s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-2ggs48k5u7je"
 s3_prefix = "buffoonery-dev"
-

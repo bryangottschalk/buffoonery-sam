@@ -65,6 +65,31 @@ exports.handler = async (event) => {
   }
   console.log('🚀 ~ file: index.js ~ line 61 ~ gameroom', gameroom);
 
+
+
+  // notify all clients in room of connection
+  if (gameroom && gameroom.connectedClients.length > 0) {
+    const postCalls = gameroom.connectedClients.map(async (connectionId) => {
+      console.log('invoking SNS topic to trigger sendmessage lambda...')
+      var params = {
+        Message: JSON.stringify({
+          msg: `Client ${connectionId} has connected.`,
+          roomcode,
+          topic: 'Client Connected',
+          connectionId
+        }),
+        TopicArn: 'arn:aws:sns:us-east-1:695097972413:ClientConnected',
+      };
+      return await new AWS.SNS({ apiVersion: '2010-03-31' }).publish(params).promise();
+    })
+    console.log('postCalls', postCalls)
+    try {
+      await Promise.all(postCalls);
+    } catch (err) {
+      console.log('error publishing SNS topic', err)
+    }
+  }
+
   const putParams = {
     TableName: process.env.TABLE_NAME,
     Item: gameroom

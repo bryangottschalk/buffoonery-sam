@@ -168,6 +168,8 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref GameroomsTable
+        - SNSCrudPolicy:
+            TopicName: ClientConnected
 
   OnConnectPermission:
     Type: AWS::Lambda::Permission
@@ -257,7 +259,7 @@ Resources:
           Type: Api
           Properties:
             RestApiId: !Ref RestApiGateway
-            Path: /getconnectedclients/{gameroomId}
+            Path: /getmeetingstate/{roomcode}
             Method: GET
 
   ClientConnectedGetPermission:

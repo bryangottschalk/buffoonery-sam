@@ -53,7 +53,7 @@ exports.handler = async (event) => {
     gameroom = new Gameroom(roomcode);
     gameroom.connectedClients.push(
       {
-        id: String(`${event.requestContext.connectionId}`),
+        connectionId: String(`${event.requestContext.connectionId}`),
         name: name
       }
     );
@@ -63,7 +63,7 @@ exports.handler = async (event) => {
     gameroom = validateGameroom(gameroom);
     gameroom.connectedClients.push(
       {
-        id: String(`${event.requestContext.connectionId}`),
+        connectionId: String(`${event.requestContext.connectionId}`),
         name: name
       }
     );
@@ -82,7 +82,7 @@ exports.handler = async (event) => {
           name: client.name,
           roomcode,
           topic: 'Client Connected',
-          client: client.connectionId
+          client
         }),
         TopicArn: 'arn:aws:sns:us-east-1:695097972413:ClientConnected',
       };

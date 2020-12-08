@@ -72,6 +72,7 @@ exports.handler = async (event, context) => {
           msg: `Client ${client.connectionId} has disconnected.`,
           roomcode,
           topic: 'Client Disconnected',
+          connectionId: client.connectionId,
           client
         }),
         TopicArn: 'arn:aws:sns:us-east-1:695097972413:ClientDisconnected',

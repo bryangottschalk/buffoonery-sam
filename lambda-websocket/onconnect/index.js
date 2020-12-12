@@ -40,10 +40,17 @@ const validateGameroom = (gameroom) => {
 };
 
 exports.handler = async (event) => {
-  let roomcode, name;
+  let roomcode,
+    name,
+    isHost = false;
   if (event.queryStringParameters) {
+    console.log(
+      '🚀 ~ file: index.js ~ line 47 ~ exports.handler= ~ event.queryStringParameters',
+      event.queryStringParameters
+    );
     roomcode = event.queryStringParameters.roomcode;
     name = event.queryStringParameters.name;
+    isHost = Boolean(event.queryStringParameters.isHost); // only host passes this, defaulted to false
   }
   if (!roomcode) {
     throw new Error('roomcode must be supplied to identify gameroom');
@@ -51,31 +58,27 @@ exports.handler = async (event) => {
   let gameroom = await getGameroom(String(roomcode));
   if (!gameroom && roomcode) {
     gameroom = new Gameroom(roomcode);
-    gameroom.connectedClients.push(
-      {
-        connectionId: String(`${event.requestContext.connectionId}`),
-        name: name
-      }
-    );
+    gameroom.connectedClients.push({
+      connectionId: String(`${event.requestContext.connectionId}`),
+      name: name,
+      isHost
+    });
     console.log('🚀 ~ file: index.js ~ line 43 ~ gameroom', gameroom);
   } else {
     console.log('FOUND GAMEROOM');
     gameroom = validateGameroom(gameroom);
-    gameroom.connectedClients.push(
-      {
-        connectionId: String(`${event.requestContext.connectionId}`),
-        name: name
-      }
-    );
+    gameroom.connectedClients.push({
+      connectionId: String(`${event.requestContext.connectionId}`),
+      name: name,
+      isHost
+    });
   }
   console.log('🚀 ~ file: index.js ~ line 61 ~ gameroom', gameroom);
-
-
 
   // notify all clients in room of connection
   if (gameroom && gameroom.connectedClients.length > 0) {
     const postCalls = gameroom.connectedClients.map(async (client) => {
-      console.log('invoking SNS topic to trigger sendmessage lambda...')
+      console.log('invoking SNS topic to trigger sendmessage lambda...');
       var params = {
         Message: JSON.stringify({
           msg: `Client ${client.connectionId} has connected - name: ${client.name}`,
@@ -84,15 +87,17 @@ exports.handler = async (event) => {
           topic: 'Client Connected',
           client
         }),
-        TopicArn: 'arn:aws:sns:us-east-1:695097972413:ClientConnected',
+        TopicArn: 'arn:aws:sns:us-east-1:695097972413:ClientConnected'
       };
-      return await new AWS.SNS({ apiVersion: '2010-03-31' }).publish(params).promise();
-    })
-    console.log('postCalls', postCalls)
+      return await new AWS.SNS({ apiVersion: '2010-03-31' })
+        .publish(params)
+        .promise();
+    });
+    console.log('postCalls', postCalls);
     try {
       await Promise.all(postCalls);
     } catch (err) {
-      console.log('error publishing SNS topic', err)
+      console.log('error publishing SNS topic', err);
     }
   }
 

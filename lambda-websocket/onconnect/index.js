@@ -12,6 +12,7 @@ class Gameroom {
     this.roomcode = roomcode;
     this.comments = [];
     this.connectedClients = [];
+    this.players = []; // for front end to reference sprites
   }
 }
 

@@ -39,7 +39,7 @@ const saveGameroom = async function (room) {
 };
 
 exports.handler = async (event, context) => {
-  let roomcode, room;
+  let roomcode, room, disconnectingClient;
   const allData = await ddb
     .scan({ TableName: process.env.TABLE_NAME })
     .promise();
@@ -47,13 +47,15 @@ exports.handler = async (event, context) => {
   allData.Items.forEach((d) => {
     d.connectedClients.forEach((client) => {
       if (client.connectionId === event.requestContext.connectionId) {
+        disconnectingClient = client;
         console.log('found a match!');
+        console.log('disconnectingClient:', disconnectingClient);
         room = d;
         room.connectedClients = room.connectedClients.filter(
           (c) => c.connectionId !== client.connectionId
         );
         console.log(`roomcode=${room.roomcode}`);
-        console.log('ROOM', room)
+        console.log('ROOM', room);
         roomcode = room.roomcode;
       }
     });
@@ -66,25 +68,28 @@ exports.handler = async (event, context) => {
   // notify all clients in room of disconnection
   if (room && room.connectedClients.length > 0) {
     const postCalls = room.connectedClients.map(async (client) => {
-      console.log('invoking SNS topic to trigger sendmessage lambda...')
+      console.log('invoking SNS topic to trigger sendmessage lambda...');
       var params = {
         Message: JSON.stringify({
-          msg: `Client ${client.connectionId} has disconnected.`,
+          msg: `Client ${disconnectingClient.connectionId} has disconnected.`,
           roomcode,
-          topic: 'Client Disconnected',
-          connectionId: client.connectionId,
+          topic: `Client Disconnected`,
+          name: disconnectingClient.name,
+          connectionId: disconnectingClient.connectionId,
           client
         }),
-        TopicArn: 'arn:aws:sns:us-east-1:695097972413:ClientDisconnected',
+        TopicArn: 'arn:aws:sns:us-east-1:695097972413:ClientDisconnected'
       };
 
-      return await new AWS.SNS({ apiVersion: '2010-03-31' }).publish(params).promise();
-    })
-    console.log('postCalls', postCalls)
+      return await new AWS.SNS({ apiVersion: '2010-03-31' })
+        .publish(params)
+        .promise();
+    });
+    console.log('postCalls', postCalls);
     try {
       await Promise.all(postCalls);
     } catch (err) {
-      console.log('error publishing SNS topic', err)
+      console.log('error publishing SNS topic', err);
     }
   }
   const deleteParams = {

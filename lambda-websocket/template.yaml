@@ -6,25 +6,24 @@ Parameters:
   StageName:
     Type: String
     Description: the development stage
-  CertArn: 
-    Type: String 
-    Description: Certificate Manager Arn for the ssl cert if one has already been created 
+  CertArn:
+    Type: String
+    Description: Certificate Manager Arn for the ssl cert if one has already been created
     Default: none
-  MyDomainName: 
-    Type: String 
+  MyDomainName:
+    Type: String
     Description: Api Domain
   ApiSubdomain:
     Type: String
     Description: Api Domain
     AllowedValues:
       - api
-  HostedZoneId: 
-    Type: String 
-    Description: Route53 Hosted zone ID if one has already been created 
+  HostedZoneId:
+    Type: String
+    Description: Route53 Hosted zone ID if one has already been created
 
 Conditions:
-  CreateCert:
-    !Equals [!Ref CertArn, 'none']
+  CreateCert: !Equals [!Ref CertArn, 'none']
 
 Globals:
   Function:
@@ -36,15 +35,15 @@ Resources:
   GeneratedCert: # If a Certificate ARN is not passed in the parameters, then a new cert is created and will required validation during the deploy
     Type: AWS::CertificateManager::Certificate
     Condition: CreateCert
-    Properties: 
+    Properties:
       DomainName: !Ref MyDomainName
-      DomainValidationOptions: 
-        - DomainName: !Ref MyDomainName 
-          HostedZoneId: !Ref HostedZoneId 
-      SubjectAlternativeNames: 
+      DomainValidationOptions:
+        - DomainName: !Ref MyDomainName
+          HostedZoneId: !Ref HostedZoneId
+      SubjectAlternativeNames:
         - !Sub '*.${MyDomainName}'
       ValidationMethod: DNS
-      
+
   RestApiGateway:
     Type: AWS::Serverless::Api
     Properties:
@@ -52,8 +51,8 @@ Resources:
       Domain:
         DomainName: !Sub '${StageName}-${ApiSubdomain}.${MyDomainName}' # ie: dev-api.buffoonery.io
         CertificateArn: !If [CreateCert, !Ref GeneratedCert, !Ref CertArn]
-        EndpointConfiguration: EDGE 
-        BasePath: / 
+        EndpointConfiguration: EDGE
+        BasePath: /
         Route53:
           HostedZoneId: !Ref HostedZoneId
 
@@ -68,6 +67,16 @@ Resources:
         - AttributeName: 'roomcode'
           KeyType: 'HASH'
 
+  CategoriesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: 'category'
+          AttributeType: 'S'
+      KeySchema:
+        - AttributeName: 'category'
+          KeyType: 'HASH'
   WebSocketAPI:
     Type: AWS::ApiGatewayV2::Api
     Properties:
@@ -232,7 +241,7 @@ Resources:
       Action: lambda:InvokeFunction
       FunctionName: !Ref SendMessageFunction
       Principal: apigateway.amazonaws.com
-      
+
   ClientConnectedGetFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -270,11 +279,11 @@ Resources:
       Action: lambda:InvokeFunction
       FunctionName: !Ref ClientConnectedGetFunction
       Principal: apigateway.amazonaws.com
-    
+
 Outputs:
   ApiEndpoint:
-    Description: "REST API endpoint URL"
-    Value: !Sub "https://${RestApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${StageName}/"
+    Description: 'REST API endpoint URL'
+    Value: !Sub 'https://${RestApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${StageName}/'
 
   GameroomsTableArn:
     Description: 'Gamerooms table ARN'

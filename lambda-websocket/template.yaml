@@ -254,15 +254,8 @@ Resources:
         Variables:
           TableName: !Ref GameroomsTable
       Policies:
-        - DynamoDBCrudPolicy:
+        - DynamoDBReadPolicy:
             TableName: !Ref GameroomsTable
-        - Statement:
-            - Effect: Allow
-              Action:
-                - 'execute-api:ManageConnections'
-                - 'execute-api:Invoke'
-              Resource:
-                - !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocketAPI}/*'
       Events:
         BuffooneryRestApiGet:
           Type: Api
@@ -271,14 +264,27 @@ Resources:
             Path: /getmeetingstate/{roomcode}
             Method: GET
 
-  ClientConnectedGetPermission:
-    Type: AWS::Lambda::Permission
-    DependsOn:
-      - WebSocketAPI
+  PromptCategoriesGetFunction:
+    Type: AWS::Serverless::Function
     Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !Ref ClientConnectedGetFunction
-      Principal: apigateway.amazonaws.com
+      CodeUri: prompt-categories-get
+      Handler: index.handler
+      Runtime: nodejs12.x
+      MemorySize: 256
+      Description: A function to get prompt categories
+      Environment:
+        Variables:
+          TableName: !Ref CategoriesTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref CategoriesTable
+      Events:
+        BuffooneryRestApiGet:
+          Type: Api
+          Properties:
+            RestApiId: !Ref RestApiGateway
+            Path: /getpromptcategories
+            Method: GET
 
 Outputs:
   ApiEndpoint:

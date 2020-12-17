@@ -1,6 +1,13 @@
 const AWS = require('aws-sdk');
 const ddb = new AWS.DynamoDB.DocumentClient({ apiVersion: '2012-08-10' });
 
+class Category {
+  constructor(category) {
+    this.category = category;
+    this.prompts = [];
+  }
+}
+
 const saveCategory = async function (category) {
   try {
     await ddb
@@ -16,12 +23,10 @@ const saveCategory = async function (category) {
 };
 
 exports.handler = async (event) => {
-  console.log('ENV VARS:', process.env);
-  console.log('EVENT:', event);
-  const payload = JSON.parse(event.body);
-  console.log('PAYLOAD:', payload);
+  const { category: categoryName } = JSON.parse(event.body);
+  const category = new Category(categoryName);
   try {
-    await saveCategory(payload);
+    await saveCategory(category);
   } catch (err) {
     return err;
   }

@@ -61,22 +61,22 @@ Resources:
     Properties:
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
-        - AttributeName: 'roomcode'
-          AttributeType: 'S'
+        - AttributeName: roomcode
+          AttributeType: S
       KeySchema:
-        - AttributeName: 'roomcode'
-          KeyType: 'HASH'
+        - AttributeName: roomcode
+          KeyType: HASH
 
   CategoriesTable:
     Type: AWS::DynamoDB::Table
     Properties:
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
-        - AttributeName: 'category'
-          AttributeType: 'S'
+        - AttributeName: category
+          AttributeType: S
       KeySchema:
-        - AttributeName: 'category'
-          KeyType: 'HASH'
+        - AttributeName: category
+          KeyType: HASH
   WebSocketAPI:
     Type: AWS::ApiGatewayV2::Api
     Properties:

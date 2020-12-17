@@ -271,7 +271,7 @@ Resources:
       Handler: index.handler
       Runtime: nodejs12.x
       MemorySize: 256
-      Description: A function to get prompt categories
+      Description: A function to get prompt categories and associated prompts
       Environment:
         Variables:
           TableName: !Ref CategoriesTable
@@ -283,8 +283,96 @@ Resources:
           Type: Api
           Properties:
             RestApiId: !Ref RestApiGateway
-            Path: /getpromptcategories
+            Path: /GetPromptCategories
             Method: GET
+
+  CategoryPutFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: category-put
+      Handler: index.handler
+      Runtime: nodejs12.x
+      MemorySize: 256
+      Description: A function to add/update a prompt category to the database.
+      Environment:
+        Variables:
+          TableName: !Ref CategoriesTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CategoriesTable
+      Events:
+        BuffooneryRestApiPut:
+          Type: Api
+          Properties:
+            RestApiId: !Ref RestApiGateway
+            Path: /SaveCategory
+            Method: PUT
+
+  CategoryDeleteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: category-delete
+      Handler: index.handler
+      Runtime: nodejs12.x
+      MemorySize: 256
+      Description: A function to delete a category and its prompts from the Categories table.
+      Environment:
+        Variables:
+          TableName: !Ref CategoriesTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CategoriesTable
+      Events:
+        BuffooneryRestApiPut:
+          Type: Api
+          Properties:
+            RestApiId: !Ref RestApiGateway
+            Path: /DeleteCategory
+            Method: DELETE
+
+  PromptPutFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: prompt-put
+      Handler: index.handler
+      Runtime: nodejs12.x
+      MemorySize: 256
+      Description: A function to add/update a prompt (associated to a category entry) in the Categories table.
+      Environment:
+        Variables:
+          TableName: !Ref CategoriesTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CategoriesTable
+      Events:
+        BuffooneryRestApiPut:
+          Type: Api
+          Properties:
+            RestApiId: !Ref RestApiGateway
+            Path: /SavePrompt
+            Method: PUT
+
+  PromptDeleteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: prompt-delete
+      Handler: index.handler
+      Runtime: nodejs12.x
+      MemorySize: 256
+      Description: A function to delete a prompt from its parent category entry in the Categories table.
+      Environment:
+        Variables:
+          TableName: !Ref CategoriesTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CategoriesTable
+      Events:
+        BuffooneryRestApiPut:
+          Type: Api
+          Properties:
+            RestApiId: !Ref RestApiGateway
+            Path: /DeletePrompt
+            Method: DELETE
 
 Outputs:
   ApiEndpoint:

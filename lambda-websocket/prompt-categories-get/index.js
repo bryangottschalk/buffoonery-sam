@@ -17,11 +17,15 @@ const getCategories = async () => {
 };
 
 exports.handler = async (event) => {
-  // TODO implement
   const categories = await getCategories();
   const response = {
     statusCode: 200,
-    body: JSON.stringify(categories)
+    body: JSON.stringify(categories),
+    headers: {
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET'
+    }
   };
   return response;
 };

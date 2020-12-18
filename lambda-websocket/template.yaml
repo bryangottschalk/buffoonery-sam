@@ -55,6 +55,10 @@ Resources:
         BasePath: /
         Route53:
           HostedZoneId: !Ref HostedZoneId
+      Cors:
+        AllowMethods: "'GET, POST, PUT, OPTIONS, DELETE'"
+        AllowOrigin: "'*'"
+        AllowHeaders: "'Content-Type,,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'"
 
   GameroomsTable:
     Type: AWS::DynamoDB::Table

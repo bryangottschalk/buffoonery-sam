@@ -44,7 +44,12 @@ exports.handler = async (event) => {
   }
   const response = {
     statusCode: 204,
-    body: JSON.stringify('Prompt successfully added to category.')
+    body: JSON.stringify('Prompt successfully added to category.'),
+    headers: {
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, PUT, POST, DELETE, OPTIONS'
+    }
   };
   return response;
 };

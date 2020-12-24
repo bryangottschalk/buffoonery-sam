@@ -13,14 +13,17 @@ Parameters:
   MyDomainName:
     Type: String
     Description: Api Domain
+    Default: buffoonery.io
   ApiSubdomain:
     Type: String
     Description: Api Domain
+    Default: api
     AllowedValues:
       - api
   HostedZoneId:
     Type: String
     Description: Route53 Hosted zone ID if one has already been created
+    Default: Z05631881PTE1Z2JRRP6J
 
 Conditions:
   CreateCert: !Equals [!Ref CertArn, 'none']
@@ -48,6 +51,11 @@ Resources:
     Type: AWS::Serverless::Api
     Properties:
       StageName: !Ref StageName
+      Auth:
+        AddDefaultAuthorizerToCorsPreflight: false
+        ApiKeyRequired: false
+        UsagePlan:
+          CreateUsagePlan: PER_API
       Domain:
         DomainName: !Sub '${StageName}-${ApiSubdomain}.${MyDomainName}' # ie: dev-api.buffoonery.io
         CertificateArn: !If [CreateCert, !Ref GeneratedCert, !Ref CertArn]
@@ -265,8 +273,10 @@ Resources:
           Type: Api
           Properties:
             RestApiId: !Ref RestApiGateway
-            Path: /getmeetingstate/{roomcode}
+            Path: /GetGameroomState/{roomcode}
             Method: GET
+            Auth:
+              ApiKeyRequired: true
 
   PromptCategoriesGetFunction:
     Type: AWS::Serverless::Function
@@ -289,6 +299,8 @@ Resources:
             RestApiId: !Ref RestApiGateway
             Path: /GetPromptCategories
             Method: GET
+            Auth:
+              ApiKeyRequired: true
 
   CategoryPutFunction:
     Type: AWS::Serverless::Function
@@ -311,6 +323,8 @@ Resources:
             RestApiId: !Ref RestApiGateway
             Path: /SaveCategory
             Method: PUT
+            Auth:
+              ApiKeyRequired: true
 
   CategoryDeleteFunction:
     Type: AWS::Serverless::Function
@@ -333,6 +347,8 @@ Resources:
             RestApiId: !Ref RestApiGateway
             Path: /DeleteCategory
             Method: DELETE
+            Auth:
+              ApiKeyRequired: true
 
   PromptPutFunction:
     Type: AWS::Serverless::Function
@@ -355,6 +371,8 @@ Resources:
             RestApiId: !Ref RestApiGateway
             Path: /SavePrompt
             Method: PUT
+            Auth:
+              ApiKeyRequired: true
 
   PromptDeleteFunction:
     Type: AWS::Serverless::Function
@@ -377,8 +395,61 @@ Resources:
             RestApiId: !Ref RestApiGateway
             Path: /DeletePrompt
             Method: DELETE
+            Auth:
+              ApiKeyRequired: true
+
+  GetAPIKeyLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      InlineCode: |
+        var response = require('cfn-response');
+        var AWS = require('aws-sdk');
+
+        exports.handler = function(event, context) {
+          var apiKeyID = event.ResourceProperties.ApiKeyID;
+          var apigateway = new AWS.APIGateway();
+          var params = {
+            apiKey: apiKeyID,
+            includeValue: true
+          };
+
+          var responseData = {};
+
+          apigateway.getApiKey(params, function(err, ApiKeyData) {
+            if (err) {
+              console.log(err, err.stack); // an error occurred
+              responseData = { "myapikey" : "error reading ApiKey" };
+              response.send(event, context, response.SUCCESS, responseData);
+            } else {
+              console.log(ApiKeyData.value);      // successful response
+              responseData = { "myapikey" : ApiKeyData.value };
+              response.send(event, context, response.SUCCESS, responseData);
+            }
+          });
+        };
+      Handler: index.handler
+      Runtime: nodejs12.x
+      Timeout: 30
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: 'Allow'
+              Action:
+                - 'apigateway:GET'
+              Resource: !Sub 'arn:${AWS::Partition}:apigateway:${AWS::Region}::/apikeys/*'
+
+  GetApiKeyValue:
+    Type: Custom::LambdaGetApiKeyValue
+    Properties:
+      ServiceToken: !GetAtt GetAPIKeyLambda.Arn
+      ApiKeyID: !Ref RestApiGatewayApiKey
 
 Outputs:
+  ApiKey:
+    Description: The api key from API Gateway
+    Value: !GetAtt GetApiKeyValue.myapikey
+    Export:
+      Name: !Sub '${AWS::StackName}-ApiKey'
   ApiEndpoint:
     Description: 'REST API endpoint URL'
     Value: !Sub 'https://${RestApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${StageName}/'

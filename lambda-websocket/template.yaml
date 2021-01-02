@@ -306,6 +306,33 @@ Resources:
             Auth:
               ApiKeyRequired: true
 
+  DistributePromptsToPlayersPutFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: distribute-prompts-to-players-put
+      Handler: index.handler
+      Runtime: nodejs12.x
+      MemorySize: 256
+      Description: A function to distribute random prompts to players in a specific gameroom
+      Environment:
+        Variables:
+          CategoriesTableName: !Ref CategoriesTable
+          GameroomsTableName: !Ref GameroomsTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref GameroomsTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref CategoriesTable
+      Events:
+        BuffooneryRestApiPut:
+          Type: Api
+          Properties:
+            RestApiId: !Ref RestApiGateway
+            Path: /DistributePromptsToPlayers/{roomcode}
+            Method: PUT
+            Auth:
+              ApiKeyRequired: true
+
   CategoryPutFunction:
     Type: AWS::Serverless::Function
     Properties:

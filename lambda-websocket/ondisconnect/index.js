@@ -35,6 +35,12 @@ const saveGameroom = async function (room) {
   }
 };
 
+const filterOutConnectionId = (connectedClients, connectionIdToRemove) => {
+  return connectedClients.filter(
+    (c) => c.connectionId !== connectionIdToRemove
+  );
+};
+
 exports.handler = async (event, context) => {
   let roomcode, room, disconnectingClient;
   const allData = await ddb
@@ -48,8 +54,9 @@ exports.handler = async (event, context) => {
         console.log('found a match!');
         console.log('disconnectingClient:', disconnectingClient);
         room = d;
-        room.connectedClients = room.connectedClients.filter(
-          (c) => c.connectionId !== client.connectionId
+        room.connectedClients = filterOutConnectionId(
+          room.connectedClients,
+          client.connectionId
         );
         console.log(`roomcode=${room.roomcode}`);
         console.log('ROOM', room);
@@ -59,7 +66,7 @@ exports.handler = async (event, context) => {
   });
 
   if (roomcode) {
-    saveGameroom(room);
+    await saveGameroom(room);
   }
 
   // notify all clients in room of disconnection
@@ -89,6 +96,9 @@ exports.handler = async (event, context) => {
       console.log('error publishing SNS topic', err);
     }
   }
+  /*
+  likely not needed, deletion is handled in sendmessage lambda (invoked by SNS topic)
+  
   const deleteParams = {
     TableName: process.env.TABLE_NAME,
     Key: {
@@ -104,6 +114,7 @@ exports.handler = async (event, context) => {
       body: 'Failed to disconnect: ' + JSON.stringify(err)
     };
   }
+  */
 
   return { statusCode: 200, body: 'Disconnected.' };
 };

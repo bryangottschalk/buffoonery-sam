@@ -6,6 +6,10 @@ Parameters:
   StageName:
     Type: String
     Description: the development stage
+    AllowedValues:
+      - dev
+      - qa
+      - prod
   MyHostedZone:
     Type: String
     Description: Hosted Zone Id
@@ -21,40 +25,12 @@ Parameters:
       - api
 
 Resources:
-
-
   LambdaWebsocket:
     Type: AWS::Serverless::Application
     Properties:
       Location: lambda-websocket/template.yaml
       Parameters:
         StageName: !Ref StageName
-        # ApiCertificateArn: !GetAtt Certificate.Outputs.CertificateArn  
-        MyDomainName: !Ref MyDomainName 
+        MyDomainName: !Ref MyDomainName
         ApiSubdomain: !Ref ApiSubdomain
         HostedZoneId: !Ref MyHostedZone
-  
-  # no longer being used
-
-  # Certificate:
-  #   # DependsOn: MyHostedZone
-  #   Type: AWS::Serverless::Application
-  #   Properties:
-  #     Location: certificate/template.yaml
-  #     Parameters:
-  #       StageName: !Ref StageName
-  #       CertDomainName: !Ref MyDomainName
-  #       # HostedZoneId: !GetAtt MyHostedZone.Outputs.HostedZoneId
-  #       HostedZoneId: !Ref MyHostedZone
-
-  # Route53:
-  #   Type: AWS::Serverless::Application
-  #   Properties:
-  #     Location: route53/template.yaml
-  #     Parameters:
-  #       StageName: !Ref StageName
-  #       ApiCertificateArn: !GetAtt Certificate.Outputs.CertificateArn  
-  #       MyDomainName: !Ref MyDomainName 
-  #       ApiSubdomain: !Ref ApiSubdomain
-  #       HostedZoneId: !Ref MyHostedZone
-  

@@ -16,6 +16,12 @@ const getGameroom = async (key, tablename) => {
   return result.Item;
 };
 
+const filterOutConnectionId = (connectedClients, connectionIdToRemove) => {
+  return connectedClients.filter(
+    (c) => c.connectionId !== connectionIdToRemove
+  );
+};
+
 exports.handler = async (event) => {
   console.log('EVENT:', event);
   console.log('process.env', process.env);
@@ -53,10 +59,13 @@ exports.handler = async (event) => {
           .promise();
       } catch (e) {
         if (e.statusCode === 410) {
-          console.log(`Found stale connection, deleting ${roomcode}`);
-          await ddb
-            .delete({ TableName: TABLE_NAME, Key: { roomcode } })
-            .promise();
+          // TODO: DELETE THE CONNECTION, NOT THE ROOM
+          console.log(
+            `Found stale connection line 57, TODO - delete ${client.connectionId} from ${roomcode}`
+          );
+          // await ddb
+          //   .delete({ TableName: TABLE_NAME, Key: { roomcode } })
+          //   .promise();
         } else {
           throw e;
         }
@@ -93,10 +102,13 @@ exports.handler = async (event) => {
             .promise();
         } catch (e) {
           if (e.statusCode === 410) {
-            console.log(`Found stale connection, deleting ${roomcode}`);
-            await ddb
-              .delete({ TableName: TABLE_NAME, Key: { roomcode } })
-              .promise();
+            // TODO: DELETE THE CONNECTION, NOT THE ROOM
+            console.log(
+              `Found stale connection line 98, TODO - delete ${client.connectionId} from ${roomcode}`
+            );
+            // await ddb
+            //   .delete({ TableName: TABLE_NAME, Key: { roomcode } })
+            //   .promise();
           } else {
             throw e;
           }

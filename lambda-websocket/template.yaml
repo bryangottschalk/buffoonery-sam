@@ -6,6 +6,10 @@ Parameters:
   StageName:
     Type: String
     Description: the development stage
+    AllowedValues:
+      - dev
+      - qa
+      - prod
   CertArn:
     Type: String
     Description: Certificate Manager Arn for the ssl cert if one has already been created

@@ -16,6 +16,12 @@ const getGameroom = async (key, tablename) => {
   return result.Item;
 };
 
+const isSNS = (event) =>
+  event.Records &&
+  event.Records[0] &&
+  event.Records[0].Sns &&
+  event.Records[0].Sns.Message;
+
 const filterOutConnectionId = (connectedClients, connectionIdToRemove) => {
   return connectedClients.filter(
     (c) => c.connectionId !== connectionIdToRemove
@@ -46,11 +52,11 @@ exports.handler = async (event) => {
       gameroom.comments.push(postData.comment);
     }
     // notify clients in room of new comment
-    gameroom.connectedClients.map(async (client) => {
+    gameroom.connectedClients.map(async (clientObj) => {
       try {
         await apigwManagementApi
           .postToConnection({
-            ConnectionId: client.connectionId,
+            ConnectionId: clientObj.connectionId,
             Data: JSON.stringify({
               topic: 'Comment Received',
               comment: postData.comment
@@ -61,7 +67,7 @@ exports.handler = async (event) => {
         if (e.statusCode === 410) {
           // TODO: DELETE THE CONNECTION, NOT THE ROOM
           console.log(
-            `Found stale connection line 57, TODO - delete ${client.connectionId} from ${roomcode}`
+            `Found stale connection line 57, TODO - delete ${clientObj.connectionId} from ${roomcode}`
           );
           // await ddb
           //   .delete({ TableName: TABLE_NAME, Key: { roomcode } })
@@ -73,12 +79,41 @@ exports.handler = async (event) => {
     });
   }
 
-  if (
-    event.Records &&
-    event.Records[0] &&
-    event.Records[0].Sns &&
-    event.Records[0].Sns.Message
-  ) {
+  const postToConnection = async (snsMessageObj, clientObj, isPlayersOnly) => {
+    try {
+      if (isPlayersOnly) {
+        if (!clientObj.isHost) {
+          await apigwManagementApi
+            .postToConnection({
+              ConnectionId: clientObj.connectionId,
+              Data: JSON.stringify(snsMessageObj)
+            })
+            .promise();
+        }
+      } else {
+        await apigwManagementApi
+          .postToConnection({
+            ConnectionId: clientObj.connectionId,
+            Data: JSON.stringify(snsMessageObj)
+          })
+          .promise();
+      }
+    } catch (e) {
+      if (e.statusCode === 410) {
+        // TODO: DELETE THE CONNECTION, NOT THE ROOM
+        console.log(
+          `Found stale connection line 98, TODO - delete ${clientObj.connectionId} from ${roomcode}`
+        );
+        // await ddb
+        //   .delete({ TableName: TABLE_NAME, Key: { roomcode } })
+        //   .promise();
+      } else {
+        throw e;
+      }
+    }
+  };
+
+  if (isSNS(event)) {
     const snsMessage = JSON.parse(event.Records[0].Sns.Message);
     console.log('snsMessage', snsMessage);
     const roomcode = snsMessage.roomcode;
@@ -92,32 +127,21 @@ exports.handler = async (event) => {
     console.log('GAMEROOM:', gameroom);
     if (topic === 'Client Disconnected' || topic === 'Client Connected') {
       if (gameroom && gameroom.connectedClients.length > 0) {
-        // inform other clients in the room that a client has disconnected
-        gameroom.connectedClients.map(async (client) => {
-          try {
-            await apigwManagementApi
-              .postToConnection({
-                ConnectionId: client.connectionId,
-                Data: JSON.stringify(snsMessage)
-              })
-              .promise();
-          } catch (e) {
-            if (e.statusCode === 410) {
-              // TODO: DELETE THE CONNECTION, NOT THE ROOM
-              console.log(
-                `Found stale connection line 98, TODO - delete ${client.connectionId} from ${roomcode}`
-              );
-              // await ddb
-              //   .delete({ TableName: TABLE_NAME, Key: { roomcode } })
-              //   .promise();
-            } else {
-              throw e;
-            }
-          }
-        });
+        // inform other clients in the room that a clientObj has disconnected
+        gameroom.connectedClients.map(
+          async (clientObj) =>
+            await postToConnection(snsMessage, clientObj, false)
+        );
       }
     } else if (snsMessage.topic === 'DistributePromptsToPlayers') {
-      console.log('TODO: DISTRIBUTE PROMPTS TO PLAYERS');
+      console.log('DISTRIBUTING PROMPTS TO PLAYERS');
+      if (gameroom && gameroom.connectedClients.length > 0) {
+        // inform other clients in the room that a clientObj has disconnected
+        gameroom.connectedClients.map(
+          async (clientObj) =>
+            await postToConnection(snsMessage, clientObj, true)
+        );
+      }
     } else {
       console.log('unhandled case in send message function');
     }

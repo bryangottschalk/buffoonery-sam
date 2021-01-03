@@ -323,6 +323,8 @@ Resources:
             TableName: !Ref GameroomsTable
         - DynamoDBReadPolicy:
             TableName: !Ref CategoriesTable
+        - SNSCrudPolicy:
+            TopicName: DistributePromptsToPlayers
       Events:
         BuffooneryRestApiPut:
           Type: Api

@@ -79,10 +79,10 @@ exports.handler = async (event) => {
     event.Records[0].Sns &&
     event.Records[0].Sns.Message
   ) {
-    console.log('SNS MESSAGE', event.Records[0].Sns.Message);
-    const snsMessage = event.Records[0].Sns.Message;
+    const snsMessage = JSON.parse(event.Records[0].Sns.Message);
     console.log('snsMessage', snsMessage);
-    const roomcode = JSON.parse(snsMessage).roomcode;
+    const roomcode = snsMessage.roomcode;
+    const topic = snsMessage.topic;
     console.log('roomcode from SNS disconnect', roomcode);
     try {
       gameroom = await getGameroom(roomcode, process.env.TABLE_NAME);
@@ -90,30 +90,36 @@ exports.handler = async (event) => {
       console.log('error getting gameroom with roomcode', err);
     }
     console.log('GAMEROOM:', gameroom);
-    if (gameroom && gameroom.connectedClients.length > 0) {
-      // inform other clients in the room that a client has disconnected
-      gameroom.connectedClients.map(async (client) => {
-        try {
-          await apigwManagementApi
-            .postToConnection({
-              ConnectionId: client.connectionId,
-              Data: JSON.stringify(snsMessage)
-            })
-            .promise();
-        } catch (e) {
-          if (e.statusCode === 410) {
-            // TODO: DELETE THE CONNECTION, NOT THE ROOM
-            console.log(
-              `Found stale connection line 98, TODO - delete ${client.connectionId} from ${roomcode}`
-            );
-            // await ddb
-            //   .delete({ TableName: TABLE_NAME, Key: { roomcode } })
-            //   .promise();
-          } else {
-            throw e;
+    if (topic === 'Client Disconnected' || topic === 'Client Connected') {
+      if (gameroom && gameroom.connectedClients.length > 0) {
+        // inform other clients in the room that a client has disconnected
+        gameroom.connectedClients.map(async (client) => {
+          try {
+            await apigwManagementApi
+              .postToConnection({
+                ConnectionId: client.connectionId,
+                Data: JSON.stringify(snsMessage)
+              })
+              .promise();
+          } catch (e) {
+            if (e.statusCode === 410) {
+              // TODO: DELETE THE CONNECTION, NOT THE ROOM
+              console.log(
+                `Found stale connection line 98, TODO - delete ${client.connectionId} from ${roomcode}`
+              );
+              // await ddb
+              //   .delete({ TableName: TABLE_NAME, Key: { roomcode } })
+              //   .promise();
+            } else {
+              throw e;
+            }
           }
-        }
-      });
+        });
+      }
+    } else if (snsMessage.topic === 'DistributePromptsToPlayers') {
+      console.log('TODO: DISTRIBUTE PROMPTS TO PLAYERS');
+    } else {
+      console.log('unhandled case in send message function');
     }
   }
 

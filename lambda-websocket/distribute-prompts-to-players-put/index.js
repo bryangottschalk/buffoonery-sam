@@ -37,6 +37,36 @@ const getCategories = async () => {
   }
 };
 
+const invokeSNSTopic = async (gameroom, prompt) => {
+  // triggers send message lambda to inform all players in room of the prompt they received
+  const postCalls = gameroom.connectedClients
+    .filter((c) => !c.isHost)
+    .map(async (client) => {
+      let params = {
+        Message: JSON.stringify({
+          msg: `Prompt received.`,
+          prompt,
+          roomcode: gameroom.roomcode,
+          topic: `DistributePromptsToPlayers`,
+          connectionId: client.connectionId,
+          client
+        }),
+        TopicArn:
+          'arn:aws:sns:us-east-1:695097972413:DistributePromptsToPlayers'
+      };
+      return await new AWS.SNS({ apiVersion: '2010-03-31' })
+        .publish(params)
+        .promise();
+    });
+  console.log('postCalls', postCalls);
+  try {
+    return await Promise.all(postCalls);
+  } catch (err) {
+    console.log('error publishing SNS topic', err);
+    throw err;
+  }
+};
+
 exports.handler = async (event) => {
   console.log(
     '🚀 ~ file: index.js ~ line 41 ~ exports.handler= ~ event',
@@ -74,6 +104,9 @@ exports.handler = async (event) => {
   });
 
   await saveGameroom(gameroom);
+  if (gameroom.connectedClients.length) {
+    await invokeSNSTopic(gameroom, randomPromptFromRandomList);
+  }
   console.log('gameroom after adding prompts', gameroom);
 
   const response = {

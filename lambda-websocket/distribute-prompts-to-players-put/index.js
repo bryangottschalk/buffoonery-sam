@@ -102,6 +102,7 @@ exports.handler = async (event) => {
       c.prompts = [{ ...randomPromptFromRandomList }];
     }
   });
+  gameroom.prompts.push(randomPromptFromRandomList);
 
   await saveGameroom(gameroom);
   if (gameroom.connectedClients.length) {

@@ -46,6 +46,10 @@ exports.handler = async (event) => {
     );
   }
 
+  if (postData && postData.topic === 'PromptSubmission') {
+    console.log('TODO, INVOKE SNS TOPIC');
+    // TODO INVOKE SNS TOPIC THAT INVOKES A LAMBDA TO UPDATE ROOM DB WITH PROMPT SUBMISSION
+  }
   if (postData && postData.roomcode) {
     gameroom = await getGameroom(postData.roomcode, process.env.TABLE_NAME);
     if (postData.hasOwnProperty('comment')) {

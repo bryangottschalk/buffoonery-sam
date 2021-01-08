@@ -8,6 +8,7 @@ class Gameroom {
   constructor(roomcode) {
     this.roomcode = roomcode;
     this.comments = [];
+    this.prompts = [];
     this.connectedClients = [];
     this.players = []; // for front end to reference sprites
   }
